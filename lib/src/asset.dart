@@ -16,11 +16,14 @@ class Asset {
   /// Original image height
   int _originalHeight;
 
+  String _path;
+
   Asset(
     this._identifier,
     this._name,
     this._originalWidth,
     this._originalHeight,
+    this._path,
   );
 
   /// The BinaryChannel name this asset is listening on.
@@ -60,6 +63,10 @@ class Asset {
   /// Returns the image name
   String get name {
     return _name;
+  }
+
+  String get path {
+    return _path;
   }
 
   /// Requests a thumbnail for the [Asset] with give [width] and [hegiht].

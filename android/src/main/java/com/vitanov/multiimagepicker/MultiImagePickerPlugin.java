@@ -437,7 +437,7 @@ public class MultiImagePickerPlugin implements
         return result;
     }
 
-    private HashMap<String, Object> getExif_str(ExifInterface exifInterface, String[] tags){
+    private HashMap<String, Object> getExif_str(ExifInterface exifInterface, String[] tags) {
         HashMap<String, Object> result = new HashMap<>();
         for (String tag : tags) {
             String attribute = exifInterface.getAttribute(tag);
@@ -448,7 +448,7 @@ public class MultiImagePickerPlugin implements
         return result;
     }
 
-    private HashMap<String, Object> getExif_double(ExifInterface exifInterface, String[] tags){
+    private HashMap<String, Object> getExif_double(ExifInterface exifInterface, String[] tags) {
         HashMap<String, Object> result = new HashMap<>();
         for (String tag : tags) {
             double attribute = exifInterface.getAttributeDouble(tag, 0.0);
@@ -473,7 +473,7 @@ public class MultiImagePickerPlugin implements
         String lightStatusBar = options.get("lightStatusBar");
         String actionBarTitle = options.get("actionBarTitle");
         String actionBarTitleColor = options.get("actionBarTitleColor");
-        String allViewTitle =  options.get("allViewTitle");
+        String allViewTitle = options.get("allViewTitle");
         String startInAllView = options.get("startInAllView");
         String useDetailsView = options.get("useDetailsView");
         String selectCircleStrokeColor = options.get("selectCircleStrokeColor");
@@ -593,6 +593,7 @@ public class MultiImagePickerPlugin implements
                 map.put("width", width);
                 map.put("height", height);
                 map.put("name", getFileName(uri));
+                map.put("path", FileDirectory.getPath(activity, uri));
                 result.add(map);
             }
             finishWithSuccess(result);
@@ -709,7 +710,7 @@ public class MultiImagePickerPlugin implements
         } catch (Exception ignored) {
 
         }
-        return  rotationDegrees;
+        return rotationDegrees;
     }
 
     private static Bitmap getCorrectlyOrientedImage(Context context, Uri photoUri) throws IOException {
