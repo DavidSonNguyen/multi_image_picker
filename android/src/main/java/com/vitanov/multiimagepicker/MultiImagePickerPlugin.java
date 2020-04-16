@@ -593,7 +593,9 @@ public class MultiImagePickerPlugin implements
                 map.put("width", width);
                 map.put("height", height);
                 map.put("name", getFileName(uri));
-                map.put("path", FileDirectory.getPath(activity, uri));
+                if (activity != null) {
+                    map.put("path", FileDirectory.getPath(activity, uri));
+                }
                 result.add(map);
             }
             finishWithSuccess(result);
