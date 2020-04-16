@@ -149,12 +149,20 @@ public class SwiftMultiImagePickerPlugin: NSObject, FlutterPlugin {
                     result(FlutterError(code: "CANCELLED", message: "The user has cancelled the selection", details: nil))
                 }, finish: { (assets: [PHAsset]) -> Void in
                     var results = [NSDictionary]();
+                    var path = ""
+                    
                     for asset in assets {
+                        asset.requestContentEditingInput(with: PHContentEditingInputRequestOptions()) { (eidtingInput, info) in
+                            if let input = eidtingInput, let photoUrl = input.fullSizeImageURL {
+                                path = photoUrl.absoluteString
+                            }
+                        }
                         results.append([
                             "identifier": asset.localIdentifier,
                             "width": asset.pixelWidth,
                             "height": asset.pixelHeight,
-                            "name": asset.originalFilename!
+                            "name": asset.originalFilename!,
+                            "path": path
                         ]);
                     }
                     result(results);
