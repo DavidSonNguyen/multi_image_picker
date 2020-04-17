@@ -23,7 +23,7 @@ class Asset {
     this._name,
     this._originalWidth,
     this._originalHeight,
-    this._path,
+    this._filePath,
   );
 
   /// The BinaryChannel name this asset is listening on.
