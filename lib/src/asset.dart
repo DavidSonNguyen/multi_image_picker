@@ -16,7 +16,7 @@ class Asset {
   /// Original image height
   int _originalHeight;
 
-  String _path;
+  String _filePath;
 
   Asset(
     this._identifier,
@@ -65,8 +65,8 @@ class Asset {
     return _name;
   }
 
-  String get path {
-    return _path;
+  String get filePath {
+    return _filePath;
   }
 
   /// Requests a thumbnail for the [Asset] with give [width] and [hegiht].
