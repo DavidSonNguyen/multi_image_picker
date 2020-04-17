@@ -152,20 +152,23 @@ public class SwiftMultiImagePickerPlugin: NSObject, FlutterPlugin {
                     var path = ""
                     
                     for asset in assets {
-                        asset.requestContentEditingInput(with: PHContentEditingInputRequestOptions()) { (eidtingInput, info) in
-                            if let input = eidtingInput, let photoUrl = input.fullSizeImageURL {
-                                path = photoUrl.absoluteString
+                        asset.requestContentEditingInput(with: PHContentEditingInputRequestOptions()) { (editingInput, info) in
+
+                            if let input = editingInput, let photoUrl = input.fullSizeImageURL {
+                                path = photoUrl.absoluteURL.absoluteString
                             }
+
+                            print(path)
+                            results.append([
+                                "identifier": asset.localIdentifier,
+                                "width": asset.pixelWidth,
+                                "height": asset.pixelHeight,
+                                "name": asset.originalFilename!,
+                                "path": path
+                            ]);
+                            result(results);
                         }
-                        results.append([
-                            "identifier": asset.localIdentifier,
-                            "width": asset.pixelWidth,
-                            "height": asset.pixelHeight,
-                            "name": asset.originalFilename!,
-                            "path": path
-                        ]);
                     }
-                    result(results);
                 }, completion: nil)
             break;
         case "requestThumbnail":
