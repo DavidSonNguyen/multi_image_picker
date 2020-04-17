@@ -163,9 +163,12 @@ public class SwiftMultiImagePickerPlugin: NSObject, FlutterPlugin {
                                 "name": asset.originalFilename!,
                                 "path": path
                             ]);
+                            
+                            if results.count == assets.count {
+                                result(results);
+                            }
                         }
                     }
-                    result(results);
                 }, completion: nil)
             break;
         case "requestThumbnail":
