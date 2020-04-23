@@ -153,7 +153,7 @@ public class SwiftMultiImagePickerPlugin: NSObject, FlutterPlugin {
                         asset.requestContentEditingInput(with: PHContentEditingInputRequestOptions()) { (editingInput, info) in
                             var path = ""
                             if let input = editingInput, let photoUrl = input.fullSizeImageURL {
-                                path = photoUrl.absoluteURL.absoluteString
+                                path = photoUrl.absoluteURL.absoluteString.replacingOccurrences(of: "file://", with: "")
                             }
 
                             results.append([
