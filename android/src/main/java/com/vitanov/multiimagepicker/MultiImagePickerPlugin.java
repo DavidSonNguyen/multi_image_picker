@@ -488,30 +488,16 @@ public class MultiImagePickerPlugin implements
             selectedUris.add(Uri.parse(path));
         }
 
-        FishBunCreator fishBun;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            fishBun = FishBun.with(MultiImagePickerPlugin.this.activity)
-                    .setImageAdapter(new GlideAdapter())
-                    .setMaxCount(maxImages)
-                    .setCamera(enableCamera)
-                    .setRequestCode(REQUEST_CODE_CHOOSE)
-                    .setSelectedImages(selectedUris)
-                    .exceptGif(true)
-                    .setIsUseDetailView(useDetailsView.equals("true"))
-                    .setReachLimitAutomaticClose(autoCloseOnSelectionLimit.equals("true"))
-                    .isStartInAllView(startInAllView.equals("true"));
-        } else {
-            fishBun = FishBun.with(MultiImagePickerPlugin.this.activity)
-                    .setImageAdapter(new GlideAdapter())
-                    .setMaxCount(maxImages)
-                    .setCamera(enableCamera)
-                    .setRequestCode(REQUEST_CODE_CHOOSE)
-                    .setSelectedImages(selectedUris)
-                    .exceptGif(false)
-                    .setIsUseDetailView(useDetailsView.equals("true"))
-                    .setReachLimitAutomaticClose(autoCloseOnSelectionLimit.equals("true"))
-                    .isStartInAllView(startInAllView.equals("true"));
-        }
+        FishBunCreator fishBun = FishBun.with(MultiImagePickerPlugin.this.activity)
+                .setImageAdapter(new GlideAdapter())
+                .setMaxCount(maxImages)
+                .setCamera(enableCamera)
+                .setRequestCode(REQUEST_CODE_CHOOSE)
+                .setSelectedImages(selectedUris)
+                .exceptGif(false)
+                .setIsUseDetailView(useDetailsView.equals("true"))
+                .setReachLimitAutomaticClose(autoCloseOnSelectionLimit.equals("true"))
+                .isStartInAllView(startInAllView.equals("true"));
 
         if (!textOnNothingSelected.isEmpty()) {
             fishBun.textOnNothingSelected(textOnNothingSelected);
