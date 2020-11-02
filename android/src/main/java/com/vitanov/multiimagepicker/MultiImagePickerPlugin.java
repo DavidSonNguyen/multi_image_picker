@@ -14,6 +14,7 @@ import android.os.Build;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.text.TextUtils;
+import android.media.ThumbnailUtils;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -35,6 +36,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
+import io.flutter.embedding.engine.plugins.FlutterPlugin;
+import io.flutter.embedding.engine.plugins.activity.ActivityAware;
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
@@ -43,11 +47,15 @@ import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
 
+import static android.media.ThumbnailUtils.OPTIONS_RECYCLE_INPUT;
+
 
 /**
  * MultiImagePickerPlugin
  */
 public class MultiImagePickerPlugin implements
+        FlutterPlugin,
+        ActivityAware,
         MethodCallHandler,
         PluginRegistry.ActivityResultListener {
 
@@ -61,29 +69,68 @@ public class MultiImagePickerPlugin implements
     private static final String ENABLE_CAMERA = "enableCamera";
     private static final String ANDROID_OPTIONS = "androidOptions";
     private static final int REQUEST_CODE_CHOOSE = 1001;
-    private final MethodChannel channel;
-    private final Activity activity;
-    private final Context context;
-    private final BinaryMessenger messenger;
+    private MethodChannel channel;
+    private Activity activity;
+    private Context context;
+    private BinaryMessenger messenger;
     private Result pendingResult;
     private MethodCall methodCall;
 
-    private MultiImagePickerPlugin(Activity activity, Context context, MethodChannel channel, BinaryMessenger messenger) {
-        this.activity = activity;
-        this.context = context;
-        this.channel = channel;
-        this.messenger = messenger;
-    }
 
     /**
      * Plugin registration.
      */
     public static void registerWith(Registrar registrar) {
-        final MethodChannel channel = new MethodChannel(registrar.messenger(), CHANNEL_NAME);
-        MultiImagePickerPlugin instance = new MultiImagePickerPlugin(registrar.activity(), registrar.context(), channel, registrar.messenger());
+        MultiImagePickerPlugin instance = new MultiImagePickerPlugin();
+        instance.onAttachedToEngine(registrar.context(), registrar.messenger(), registrar.activity());
         registrar.addActivityResultListener(instance);
-        channel.setMethodCallHandler(instance);
+    }
 
+    private void onAttachedToEngine(Context applicationContext, BinaryMessenger binaryMessenger, Activity activity) {
+        context = applicationContext;
+        messenger = binaryMessenger;
+        if (activity != null) {
+          this.activity = activity;
+        }
+        channel = new MethodChannel(binaryMessenger, CHANNEL_NAME);
+        channel.setMethodCallHandler(this);
+    }
+
+    @Override
+    public void onAttachedToEngine(FlutterPluginBinding binding) {
+        onAttachedToEngine(binding.getApplicationContext(), binding.getBinaryMessenger(), null);
+    }
+
+    @Override
+    public void onDetachedFromEngine(FlutterPluginBinding binding) {
+        context = null;
+        if (channel != null) {
+            channel.setMethodCallHandler(null);
+            channel = null;
+        }
+        messenger = null;
+    }
+
+    @Override
+    public void onAttachedToActivity(ActivityPluginBinding binding) {
+        binding.addActivityResultListener(this);
+        activity = binding.getActivity();
+    }
+
+    @Override
+    public void onDetachedFromActivity() {
+        activity = null;
+    }
+
+    @Override
+    public void onDetachedFromActivityForConfigChanges() {
+        activity = null;
+    }
+
+    @Override
+    public void onReattachedToActivityForConfigChanges(ActivityPluginBinding binding) {
+        binding.addActivityResultListener(this);
+        activity = binding.getActivity();
     }
 
     private static class GetThumbnailTask extends AsyncTask<String, Void, ByteBuffer> {
@@ -114,7 +161,8 @@ public class MultiImagePickerPlugin implements
                 Activity activity = activityReference.get();
                 if (activity == null || activity.isFinishing()) return null;
 
-                Bitmap bitmap = getCorrectlyOrientedImage(activity, uri, this.width, this.height);
+                Bitmap sourceBitmap = getCorrectlyOrientedImage(activity, uri);
+                Bitmap bitmap = ThumbnailUtils.extractThumbnail(sourceBitmap, this.width, this.height, OPTIONS_RECYCLE_INPUT);
 
                 if (bitmap == null) return null;
 
@@ -340,8 +388,6 @@ public class MultiImagePickerPlugin implements
                     ExifInterface.TAG_GPS_DEST_DISTANCE_REF,
                     ExifInterface.TAG_GPS_DEST_LATITUDE_REF,
                     ExifInterface.TAG_GPS_DEST_LONGITUDE_REF,
-                    ExifInterface.TAG_GPS_DOP,
-                    ExifInterface.TAG_GPS_IMG_DIRECTION,
                     ExifInterface.TAG_GPS_IMG_DIRECTION_REF,
                     ExifInterface.TAG_GPS_MAP_DATUM,
                     ExifInterface.TAG_GPS_MEASURE_MODE,
@@ -391,6 +437,8 @@ public class MultiImagePickerPlugin implements
                     ExifInterface.TAG_GPS_DEST_LATITUDE,
                     ExifInterface.TAG_GPS_DEST_LONGITUDE,
                     ExifInterface.TAG_GPS_DIFFERENTIAL,
+                    ExifInterface.TAG_GPS_DOP,
+                    ExifInterface.TAG_GPS_IMG_DIRECTION,
                     ExifInterface.TAG_GPS_SPEED,
                     ExifInterface.TAG_GPS_TRACK,
                     ExifInterface.TAG_JPEG_INTERCHANGE_FORMAT,
@@ -559,6 +607,10 @@ public class MultiImagePickerPlugin implements
             finishWithError("CANCELLED", "The user has cancelled the selection");
         } else if (requestCode == REQUEST_CODE_CHOOSE && resultCode == Activity.RESULT_OK) {
             List<Uri> photos = data.getParcelableArrayListExtra(Define.INTENT_PATH);
+            if (photos == null) {
+                clearMethodCallAndResult();
+                return false;
+            }
             List<HashMap<String, Object>> result = new ArrayList<>(photos.size());
             for (Uri uri : photos) {
                 HashMap<String, Object> map = new HashMap<>();
@@ -732,37 +784,6 @@ public class MultiImagePickerPlugin implements
         if (is != null) {
             is.close();
         }
-
-        if (orientation > 0) {
-            Matrix matrix = new Matrix();
-            matrix.postRotate(orientation);
-
-            srcBitmap = Bitmap.createBitmap(srcBitmap, 0, 0, srcBitmap.getWidth(),
-                    srcBitmap.getHeight(), matrix, true);
-        }
-
-        return srcBitmap;
-    }
-
-    // https://developer.android.com/topic/performance/graphics/load-bitmap#java
-    private static Bitmap getCorrectlyOrientedImage(Context context, Uri photoUri, int width, int height) throws IOException {
-        int orientation = getOrientation(context, photoUri);
-
-        BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inJustDecodeBounds = true;
-        InputStream is = context.getContentResolver().openInputStream(photoUri);
-        BitmapFactory.decodeStream(is, null, options);
-
-        // Decode bitmap with inSampleSize set
-        options.inJustDecodeBounds = false;
-        options.inDither = false;
-        // Calculate inSampleSize
-        options.inSampleSize = calculateInSampleSize(options, width, height);
-        options.inScaled = false;
-        options.inPreferredConfig = Bitmap.Config.ARGB_8888;
-
-        InputStream is2 = context.getContentResolver().openInputStream(photoUri);
-        Bitmap srcBitmap = BitmapFactory.decodeStream(is2, null, options);
 
         if (orientation > 0) {
             Matrix matrix = new Matrix();
